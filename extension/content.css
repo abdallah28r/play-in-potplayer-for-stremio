@@ -1,0 +1,57 @@
+/* Messages shown by the extension.
+   .spp-pill = success/progress capsule (bottom), .spp-card = warning/error card (top). */
+.spp-toast {
+  position: fixed;
+  left: 50%;
+  z-index: 2147483647;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 500 15px/1.6 "Segoe UI", Tahoma, Arial, sans-serif;
+  text-align: start;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.spp-toast.spp-show { opacity: 1; pointer-events: auto; }
+.spp-toast .spp-icon { display: inline-flex; flex: none; }
+.spp-toast .spp-icon svg { width: 18px; height: 18px; display: block; }
+
+/* Success: short capsule in the same translucent look as Stremio's streams panel
+   (dark 40% overlay + 15px background blur, Stremio's text colour and font). */
+.spp-pill {
+  bottom: 32px;
+  max-width: calc(100vw - 32px);
+  padding: 9px 20px 9px 16px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.4);
+  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+  font-family: "PlusJakartaSans", "Segoe UI", Tahoma, Arial, sans-serif;
+  white-space: nowrap;
+  transform: translate(-50%, 16px);
+}
+.spp-pill.spp-show { transform: translate(-50%, 0); }
+.spp-pill .spp-icon { color: #a18cff; } /* Stremio accent, lightened for contrast */
+.spp-pill .spp-icon svg { width: 16px; height: 16px; }
+
+/* Warning / error: full-colour card, Stremio style */
+.spp-card {
+  top: 24px;
+  width: max-content;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 12px 18px;
+  border-radius: 12px;
+  color: #fff;
+  align-items: flex-start;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  transform: translate(-50%, -16px);
+}
+.spp-card.spp-show { transform: translate(-50%, 0); }
+.spp-card .spp-icon { margin-top: 3px; }
+.spp-card.spp-kind-warn { background: #b07800; }
+.spp-card.spp-kind-error { background: #c0392b; }

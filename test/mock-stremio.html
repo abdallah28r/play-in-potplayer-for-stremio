@@ -1,0 +1,138 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Mock Stremio streams</title>
+<link rel="stylesheet" href="../extension/content.css">
+<style>
+  body { background:#0f0d20; color:#ddd; font:14px Segoe UI, sans-serif; margin:0; }
+  #app { display:flex; gap:24px; padding:20px; }
+  .streams-container-bbSc4 { width:430px; display:flex; flex-direction:column; gap:8px; }
+  a[class*="stream-container-"] { position:relative; display:flex; gap:12px; padding:12px; border-radius:8px; background:#1d1a35; color:#ddd; text-decoration:none; }
+  a[class*="stream-container-"].active { outline:2px solid #7b5bf5; }
+  .menu-container-B6cqK, .portal-menu { position:absolute; top:60%; left:10%; z-index:10; width:340px; background:#15122b; border-radius:10px; box-shadow:0 8px 30px #000; }
+  .portal-menu { position:fixed; top:120px; left:480px; }
+  .context-menu-title-aoWE4 { padding:12px 21px; font-size:12px; opacity:.7; }
+  [class*="option-container"], .ctx-item-QQ1 { display:flex; align-items:center; gap:14px; padding:14px 21px; cursor:pointer; }
+  [class*="option-container"]:hover, .ctx-item-QQ1:hover { background:#2a2550; }
+  [class*="option-container"]:focus, .ctx-item-QQ1:focus { outline:1px solid #7b5bf5; }
+  svg { width:18px; height:18px; fill:#bbb; }
+  #log { flex:1; white-space:pre-wrap; font:12px Consolas, monospace; background:#000; padding:10px; min-height:400px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="streams-container-bbSc4" id="streams"></div>
+  <div id="log"></div>
+</div>
+<script>
+const variant = new URLSearchParams(location.search).get('variant') || 'real';
+const log = (...a) => { const l = document.getElementById('log'); l.textContent += a.join(' ') + '\n'; };
+window.__events = [];
+const rec = (e) => { window.__events.push(e); log(e); };
+
+async function encodeStream(obj) {
+  const cs = new Blob([JSON.stringify(obj)]).stream().pipeThrough(new CompressionStream('deflate'));
+  const bytes = new Uint8Array(await new Response(cs).arrayBuffer());
+  let bin = ''; bytes.forEach(b => bin += String.fromCharCode(b));
+  return encodeURIComponent(btoa(bin));
+}
+const ADDON = encodeURIComponent('https://addon.example/abc/def/manifest.json');
+const META = encodeURIComponent('https://v3-cinemeta.strem.io/manifest.json');
+const longToken = 'X'.repeat(2100);
+const STREAMS = [
+  { label: 'http-url', s: { name: 'Test 1080p', description: 'sample-video.mkv\n1.52 GB', url: 'https://cdn.example.com/playback/eyJhbG+ci/Oi==/sample video.mkv?token=Ab%2FCd&exp=99', behaviorHints: { filename: 'sample-video.mkv', videoSize: 1 } } },
+  { label: 'headers', s: { name: 'Hdr', description: 'with headers', url: 'https://cdn.example.com/v.m3u8', behaviorHints: { proxyHeaders: { request: { Referer: 'https://ref.example/', 'User-Agent': 'UA/1.0', Origin: 'https://ref.example' } } } } },
+  { label: 'torrent', s: { name: 'Hash 1080p', description: 'info hash', infoHash: '0123456789abcdef0123456789abcdef01234567', fileIdx: 2, sources: ['tracker:udp://t.example:1337'] } },
+  { label: 'external', s: { name: 'Ext', description: 'external link', externalUrl: 'https://www.example.com/title/1' } },
+  { label: 'too-long', s: { name: 'Long', description: 'very long url', url: 'https://x.example/' + longToken } },
+];
+
+function playIcon() { return '<svg class="menu-icon-JD2rP" viewBox="0 0 512 512"><path d="M396 246 164 85c-9-6-21 0-21 11v321c0 11 12 17 21 11l232-161c8-5 8-16 0-21z"/></svg>'; }
+function linkIcon() { return '<svg class="menu-icon-JD2rP" viewBox="0 0 512 512"><path d="M100 100h300v300H100z"/></svg>'; }
+
+function menuHtml(desc) {
+  if (variant === 'renamed') {
+    // Stremio renamed every class: only structure is left
+    return `<div class="popover-wrap-Z1"><div class="ctx-menu-body-Z9">
+      <div class="ctx-heading-Z2">${desc}</div>
+      <div class="ctx-item-QQ1" tabindex="0">${playIcon()}<span class="ctx-text-QQ2">Play</span></div>
+      <div class="ctx-item-QQ1 copy" tabindex="0">${linkIcon()}<span class="ctx-text-QQ2">Copy stream link</span></div>
+    </div></div>`;
+  }
+  return `<div class="menu-container-B6cqK menu-direction-bottom-right-aJ89V"><div class="context-menu-content-Xe_lN">
+    <div class="context-menu-title-aoWE4">${desc}</div>
+    <div class="context-menu-option-container-BZGla button-container-zVLH6" tabindex="0">${playIcon()}<div class="context-menu-option-label-EbNNz">Play</div></div>
+    <div class="context-menu-option-container-BZGla button-container-zVLH6 copy" tabindex="0">${linkIcon()}<div class="context-menu-option-label-EbNNz">Copy stream link</div></div>
+    <div class="context-menu-option-container-BZGla button-container-zVLH6 copy" tabindex="0">${linkIcon()}<div class="context-menu-option-label-EbNNz">Copy video download link</div></div>
+  </div></div>`;
+}
+
+let openMenu = null; // {anchor, el}
+function closeMenu(reason) {
+  if (!openMenu) return;
+  openMenu.el.remove(); openMenu.anchor.classList.remove('active');
+  rec('menu-closed:' + reason); openMenu = null;
+}
+
+(async () => {
+  const list = document.getElementById('streams');
+  for (const { label, s } of STREAMS) {
+    const a = document.createElement('a');
+    a.className = 'label-container-XOyzm stream-container-JPdah button-container-zVLH6';
+    a.title = 'Test Addon';
+    a.dataset.label = label;
+    a.href = `#/player/${await encodeStream(s)}/${ADDON}/${META}/series/tt123/${encodeURIComponent('tt123:1:10')}`;
+    a.innerHTML = `<div class="info-container-TihQo"><div><div class="addon-name-tC8PX">${s.name}</div></div></div><div class="description-container-vW_De">${label}: ${s.description}</div>`;
+    list.appendChild(a);
+  }
+  const ad = document.createElement('a');
+  ad.className = 'label-container-XOyzm stream-container-JPdah';
+  ad.href = 'https://www.strem.io/donations/banner-click';
+  ad.dataset.label = 'ad';
+  ad.textContent = 'Donate banner (ad row)';
+  list.appendChild(ad);
+
+  // Stremio-like behaviour -------------------------------------------------
+  list.addEventListener('contextmenu', (e) => {
+    const a = e.target.closest('a[class*="stream-container-"]');
+    if (!a) return;
+    e.preventDefault();
+    closeMenu('reopen');
+    setTimeout(() => { // React renders a moment later
+      const holder = document.createElement('div');
+      holder.innerHTML = menuHtml((a.querySelector('[class*="description"]') || a).textContent);
+      const el = holder.firstElementChild;
+      if (variant === 'portal') { el.className = 'portal-menu'; document.body.appendChild(el); }
+      else a.appendChild(el);
+      a.classList.add('active');
+      openMenu = { anchor: a, el };
+      el.querySelectorAll('.copy').forEach(c => c.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); rec('copy-clicked'); closeMenu('copy'); }));
+      rec('menu-opened:' + a.dataset.label);
+    }, 0);
+  });
+  // Popup closes on window mousedown outside the row, and on Escape (event.code)
+  window.addEventListener('mousedown', (e) => {
+    if (openMenu && e.target !== document.documentElement && !openMenu.anchor.contains(e.target) && !openMenu.el.contains(e.target)) closeMenu('outside-mousedown');
+  });
+  window.addEventListener('keydown', (e) => { if (e.code === 'Escape') closeMenu('escape'); });
+  // React root listeners (should never see clicks on the injected option)
+  document.getElementById('app').addEventListener('click', (e) => {
+    if (e.target.closest('[data-spp-option]')) rec('LEAK: react-root saw click on injected option');
+  });
+  // Play: no handler, the <a> navigates → playback in Stremio
+  window.addEventListener('hashchange', () => { if (location.hash.startsWith('#/player/')) { rec('STREMIO-PLAYBACK-STARTED'); history.replaceState(null, '', location.pathname + location.search); } });
+  // Capture external launches instead of really opening potplayer://
+  window.addEventListener('click', (e) => {
+    const l = e.target.closest && e.target.closest('a[href^="potplayer:"]');
+    if (l) { e.preventDefault(); rec('LAUNCH ' + l.getAttribute('href')); }
+  }, true);
+
+  const s = document.createElement('script');
+  s.src = '../extension/content.js';
+  s.onload = () => rec('content-script-loaded');
+  document.head.appendChild(s);
+})();
+</script>
+</body>
+</html>

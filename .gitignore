@@ -1,0 +1,7 @@
+# Private notes and old files: never publish
+_private/
+
+# Local tool settings
+.claude/
+
+*.zip

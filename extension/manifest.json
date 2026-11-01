@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Play in PotPlayer for Stremio",
+  "version": "1.1.0",
+  "description": "Unofficial. Adds \"Play in PotPlayer\" to the stream right-click menu on Stremio Web.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "host_permissions": [
+    "http://127.0.0.1:11470/*"
+  ],
+  "permissions": [
+    "clipboardWrite"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://web.stremio.com/*", "https://web.strem.io/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

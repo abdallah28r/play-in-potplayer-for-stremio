@@ -1,0 +1,65 @@
+# Play in PotPlayer for Stremio
+
+Play any Stremio Web stream in PotPlayer with one click.
+
+This Chrome extension adds a **Play in PotPlayer** option to the right-click menu of streams on [web.stremio.com](https://web.stremio.com). Nothing else to install or configure.
+
+> Unofficial project. Not affiliated with, endorsed by, or sponsored by Stremio or Kakao (PotPlayer).
+
+## Requirements
+
+- Windows
+- [PotPlayer](https://potplayer.tv/) (64-bit, up to date)
+- Google Chrome, or another Chromium browser such as Edge or Brave
+
+## Install
+
+1. Download `play-in-potplayer-for-stremio.zip` from the [latest release](https://github.com/abdallah28r/play-in-potplayer-for-stremio/releases/latest).
+2. Unzip it to a folder you will keep. Chrome loads the extension from this folder, so don't delete or move it.
+3. Open `chrome://extensions` in Chrome.
+4. Turn on **Developer mode** (top right).
+5. Click **Load unpacked** and select the unzipped folder.
+
+If Stremio Web is already open, reload the page with `F5`.
+
+## Use
+
+1. Open a movie or episode on [web.stremio.com](https://web.stremio.com).
+2. **Right-click** a stream in the list.
+3. Click **Play in PotPlayer**.
+
+The first time, Chrome asks to open PotPlayer. Tick **Always allow** and click **Open**.
+
+## Troubleshooting
+
+| Problem | Fix |
+| --- | --- |
+| The option is not in the menu | Reload Stremio with `F5`. Make sure you right-clicked a stream, because a left click plays it inside Stremio. |
+| Nothing happens when I click it | Check that PotPlayer is installed and up to date, then try again. If you declined Chrome's prompt, reload the page and accept it. |
+| PotPlayer opens but the video fails | The link may have expired, so open it again from Stremio or try another stream. |
+| "Link is too long" message | The link was copied for you. Press `Ctrl+U` in PotPlayer and paste it. |
+| "Needs Stremio Service" message | Install and start [Stremio Service](https://www.stremio.com/download-service), then try again. |
+
+Streams that need custom connection headers may not play, because PotPlayer cannot receive headers through a link.
+
+## Privacy
+
+- No accounts, analytics, or tracking. The extension has no server and collects nothing.
+- It runs only on Stremio Web. The stream link is sent only to PotPlayer on your PC, and to Stremio's local streaming server (`127.0.0.1:11470`) when a stream needs it.
+- Stream links can contain private tokens from your add-ons. PotPlayer may show them in its title bar and keep them in its history, so take care when sharing screenshots.
+
+## Legal
+
+This project is a small launcher. It does not host, provide, index, or link to any media, and it includes no add-ons or stream sources. It does not bypass DRM or any other copy protection.
+
+You are responsible for what you watch and for following the laws of your country and the terms of the services you use. Only play content you have the right to access.
+
+Stremio and PotPlayer are trademarks of their respective owners and are named here only to describe compatibility.
+
+## Acknowledgements
+
+The request used to start streams on Stremio's local server follows the format used by [stremio-video](https://github.com/Stremio/stremio-video) (MIT License).
+
+## License
+
+[MIT](LICENSE)
