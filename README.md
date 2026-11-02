@@ -2,10 +2,6 @@
 
 Play any Stremio Web stream in PotPlayer with one click.
 
-This Chrome extension adds a **Play in PotPlayer** option to the right-click menu of streams on [web.stremio.com](https://web.stremio.com). Nothing else to install or configure.
-
-> Unofficial project. Not affiliated with, endorsed by, or sponsored by Stremio or Kakao (PotPlayer).
-
 ## Requirements
 
 - Windows
@@ -23,6 +19,8 @@ This Chrome extension adds a **Play in PotPlayer** option to the right-click men
 If Stremio Web is already open, reload the page with `F5`.
 
 ## Use
+
+This Chrome extension adds a **Play in PotPlayer** option to the right-click menu of streams on [web.stremio.com](https://web.stremio.com). Nothing else to install or configure.
 
 1. Open a movie or episode on [web.stremio.com](https://web.stremio.com).
 2. **Right-click** a stream in the list.
@@ -75,3 +73,5 @@ The request used to start streams on Stremio's local server follows the format u
 ## License
 
 [MIT](LICENSE)
+
+> Unofficial project. Not affiliated with, endorsed by, or sponsored by Stremio or PotPlayer
