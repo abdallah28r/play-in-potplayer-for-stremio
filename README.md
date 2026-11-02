@@ -1,4 +1,4 @@
-# Play in PotPlayer for Stremio
+<img src="docs/images/banner.png" alt="Play in PotPlayer for Stremio" width="100%">
 
 Play any Stremio Web stream in PotPlayer with one click.
 
