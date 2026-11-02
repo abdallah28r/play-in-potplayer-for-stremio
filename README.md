@@ -28,7 +28,19 @@ If Stremio Web is already open, reload the page with `F5`.
 2. **Right-click** a stream in the list.
 3. Click **Play in PotPlayer**.
 
+<img src="docs/images/menu.png" alt="Stremio stream menu with the new Play in PotPlayer option under Play" width="387">
+
 The first time, Chrome asks to open PotPlayer. Tick **Always allow** and click **Open**.
+
+## Messages
+
+The extension tells you what happened in a small message on the page.
+
+| Message | Meaning |
+| --- | --- |
+| <img src="docs/images/message-opening.png" alt="Opening in PotPlayer" width="240"> | The link was sent to PotPlayer. |
+| <img src="docs/images/message-not-opened.png" alt="PotPlayer did not open warning" width="420"> | The page stayed in front, so PotPlayer may not have opened. |
+| <img src="docs/images/message-error.png" alt="Error message for a stream that cannot play in PotPlayer" width="420"> | This stream cannot play in PotPlayer. The message gives the reason. |
 
 ## Troubleshooting
 
