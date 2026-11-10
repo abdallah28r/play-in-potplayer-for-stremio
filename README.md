@@ -37,7 +37,7 @@ The first time, Chrome asks to open PotPlayer. Tick **Always allow** and click *
 A link can only carry the video, so subtitles from your Stremio subtitle add-ons (such as OpenSubtitles or SubDL) do not reach PotPlayer by default. To bring them along, install the small subtitles helper once:
 
 1. Open the `subtitles-helper` folder inside the extension folder. Keep it where it is.
-2. Double-click `install.bat`. No admin rights are needed. If Windows asks whether to run it, click **Run**.
+2. Double-click `install.bat`. No admin rights are needed. If Windows warns about it, click **Run** only if you downloaded the extension from this repository's [Releases page](https://github.com/abdallah28r/play-in-potplayer-for-stremio/releases).
 3. Reload Stremio Web with `F5`.
 
 From then on, **Play in PotPlayer** asks your installed subtitle add-ons for subtitles, the same way Stremio's own player does, and opens PotPlayer with all of them in your **Default Subtitles Language** (set in Stremio's settings). There is no limit on how many. They are listed add-on by add-on, in the order of your add-ons in Stremio, and each add-on's subtitles keep the order the add-on gives them (usually best first). If none is in your language, the video opens without subtitles.
@@ -84,11 +84,11 @@ Streams that need custom connection headers may not play, because PotPlayer cann
 
 ## Legal
 
-This project is a small launcher. It does not host, provide, index, or link to any media, and it includes no add-ons or stream sources. It does not bypass DRM or any other copy protection.
+This project is a small launcher. It does not host, provide, index, or link to any media, and it includes no add-ons, stream sources or subtitle sources. Subtitles come only from the subtitle add-ons you installed in Stremio. It does not bypass DRM or any other copy protection.
 
 You are responsible for what you watch and for following the laws of your country and the terms of the services you use. Only play content you have the right to access.
 
-Stremio and PotPlayer are trademarks of their respective owners and are named here only to describe compatibility.
+Stremio, PotPlayer, OpenSubtitles and SubDL are trademarks of their respective owners and are named here only to describe compatibility.
 
 ## Acknowledgements
 
