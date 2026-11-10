@@ -5,3 +5,6 @@ _private/
 .claude/
 
 *.zip
+
+# Written by extension/subtitles-helper/install.bat (contains a local path)
+extension/subtitles-helper/play_in_potplayer.subtitles.json

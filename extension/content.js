@@ -35,6 +35,11 @@
     tooLongNoCopy: 'This link is too long to open directly. Use "Copy stream link", then press Ctrl+U in PotPlayer and paste it.',
     headersNote: 'This stream needs custom connection headers, which PotPlayer cannot receive through a link, so it may not play.',
     noExtension: 'The extension was updated. Reload this page (F5) and try again.',
+    findingSubs: 'Finding subtitles',
+    sendingWithSubs: (n) => `Opening in PotPlayer with ${n} subtitle${n === 1 ? '' : 's'}`,
+    sendingNoSubs: 'Opening in PotPlayer. No subtitles in your languages were found for this video.',
+    sendingSubsFailed: 'Opening in PotPlayer. Subtitles were found but could not be downloaded.',
+    helperNoPotPlayer: 'The subtitles helper could not find PotPlayer. Make sure PotPlayer is installed.',
   };
 
   // ------------------------------------------------------------------ stream rows
@@ -110,16 +115,16 @@
 
     if (typeof stream.url === 'string' && stream.url.trim()) {
       const url = stream.url.trim();
-      if (/^https?:\/\//i.test(url)) return { ok: true, kind: 'url', url, headers };
+      if (/^https?:\/\//i.test(url)) return { ok: true, kind: 'url', url, headers, stream };
       const magnet = /^magnet:\?.*xt=urn:btih:([0-9a-f]{40})/i.exec(url);
-      if (magnet) return { ok: true, kind: 'torrent', infoHash: magnet[1].toLowerCase(), fileIdx: stream.fileIdx, sources: stream.sources };
+      if (magnet) return { ok: true, kind: 'torrent', infoHash: magnet[1].toLowerCase(), fileIdx: stream.fileIdx, sources: stream.sources, stream };
       return { ok: false, message: TEXT.unsupportedScheme((url.split(':')[0] || '?').slice(0, 20)) };
     }
     if (typeof stream.infoHash === 'string' && /^[0-9a-f]{40}$/i.test(stream.infoHash)) {
-      return { ok: true, kind: 'torrent', infoHash: stream.infoHash.toLowerCase(), fileIdx: stream.fileIdx, sources: stream.sources };
+      return { ok: true, kind: 'torrent', infoHash: stream.infoHash.toLowerCase(), fileIdx: stream.fileIdx, sources: stream.sources, stream };
     }
     if (typeof stream.ytId === 'string' && stream.ytId) {
-      return { ok: true, kind: 'url', url: `https://www.youtube.com/watch?v=${encodeURIComponent(stream.ytId)}` };
+      return { ok: true, kind: 'url', url: `https://www.youtube.com/watch?v=${encodeURIComponent(stream.ytId)}`, stream };
     }
     if (stream.externalUrl) return { ok: false, message: TEXT.external };
     if (stream.nzbUrl || stream.rarUrls || stream.zipUrls || stream['7zipUrls'] || stream.tgzUrls || stream.tarUrls) {
@@ -145,6 +150,165 @@
     decodeCache.set(href, entry);
     if (decodeCache.size > 100) decodeCache.delete(decodeCache.keys().next().value);
     return entry;
+  }
+
+  // ------------------------------------------------------------------ subtitles
+
+  // Used only when the optional subtitles helper is installed. Subtitles are requested the same
+  // way Stremio's own player does: from every installed add-on with a "subtitles" resource
+  // (verified on web.stremio.com, 2026-11-10: profile.addons and profile.settings in localStorage).
+  const SUBS_TIMEOUT_MS = 9000; // some subtitle add-ons (e.g. OpenSubtitles v3+) take several seconds
+  const DEFAULT_SUB_ADDONS = [{
+    transportUrl: 'https://opensubtitles-v3.strem.io/manifest.json',
+    manifest: { name: 'OpenSubtitles v3', resources: ['subtitles'], types: ['movie', 'series'], idPrefixes: ['tt'] },
+  }];
+
+  // Stremio uses ISO 639-2 codes ("ara", "eng", "fre", "pob"); this maps them to 2-letter codes
+  // so they can be compared with "ar"/"en" and named with Intl.DisplayNames.
+  const LANG3 = {
+    ara: 'ar', eng: 'en', fre: 'fr', fra: 'fr', ger: 'de', deu: 'de', spa: 'es', spn: 'es', ita: 'it', por: 'pt', pob: 'pt',
+    rus: 'ru', tur: 'tr', per: 'fa', fas: 'fa', urd: 'ur', hin: 'hi', ind: 'id', may: 'ms', msa: 'ms', chi: 'zh', zho: 'zh',
+    jpn: 'ja', kor: 'ko', dut: 'nl', nld: 'nl', pol: 'pl', swe: 'sv', nor: 'no', dan: 'da', fin: 'fi', gre: 'el', ell: 'el',
+    heb: 'he', cze: 'cs', ces: 'cs', hun: 'hu', rum: 'ro', ron: 'ro', bul: 'bg', hrv: 'hr', srp: 'sr', slv: 'sl', slo: 'sk',
+    slk: 'sk', ukr: 'uk', vie: 'vi', tha: 'th', ben: 'bn', tam: 'ta', tel: 'te', mal: 'ml', kur: 'ku', alb: 'sq', sqi: 'sq',
+  };
+  // Some add-ons send a language name ("Arabic", "العربية") instead of a code.
+  let nameToCode = null;
+  function langFromName(name) {
+    if (!nameToCode) {
+      nameToCode = {};
+      const codes = [...new Set(Object.values(LANG3))];
+      for (const display of ['en', 'ar']) {
+        try {
+          const names = new Intl.DisplayNames([display], { type: 'language' });
+          for (const c of codes) { const n = names.of(c); if (n) nameToCode[n.toLowerCase()] = c; }
+        } catch { /* no Intl.DisplayNames */ }
+      }
+    }
+    return nameToCode[name] || null;
+  }
+  function langKey(code) {
+    const raw = String(code || '').trim().toLowerCase();
+    const c = raw.split(/[-_]/)[0];
+    if (LANG3[c]) return LANG3[c];
+    if (c.length <= 3) return c;
+    return langFromName(raw) || langFromName(raw.split(/[\s(]/)[0]) || c;
+  }
+  let langNames = null;
+  function langName(code) {
+    const key = langKey(code);
+    if (!key) return '';
+    try {
+      langNames = langNames || new Intl.DisplayNames(['en'], { type: 'language' });
+      const name = langNames.of(key);
+      if (name && name.toLowerCase() !== key) return name;
+    } catch { /* unknown code */ }
+    return String(code);
+  }
+
+  // "#/player/<STREAM>/<streamAddon>/<metaAddon>/<type>/<id>/<videoId>"
+  function playerRoute(href) {
+    const m = /(?:^|[#/])player\/([^?#]+)/.exec(href || '');
+    if (!m) return null;
+    const parts = m[1].split('/').map((p) => { try { return decodeURIComponent(p); } catch { return p; } });
+    if (parts.length < 6) return null;
+    return { type: parts[3], id: parts[4], videoId: parts[5] || parts[4] };
+  }
+
+  function readProfile() {
+    try { return JSON.parse(localStorage.getItem('profile') || 'null') || {}; } catch { return {}; }
+  }
+
+  function addonServes(addon, type, id) {
+    const manifest = addon && addon.manifest;
+    if (!manifest || !Array.isArray(manifest.resources)) return false;
+    const matches = (types, prefixes) => (!Array.isArray(types) || types.includes(type))
+      && (!Array.isArray(prefixes) || !prefixes.length || prefixes.some((p) => id.startsWith(p)));
+    return manifest.resources.some((r) => (r === 'subtitles' && matches(manifest.types, manifest.idPrefixes))
+      || (r && r.name === 'subtitles' && matches(r.types || manifest.types, r.idPrefixes || manifest.idPrefixes)));
+  }
+
+  function subtitlesUrl(addon, type, videoId, stream) {
+    const base = String(addon.transportUrl || '').replace(/\/manifest\.json(\?.*)?$/, '');
+    if (!/^https?:\/\//i.test(base)) return null;
+    const hints = (stream && stream.behaviorHints) || {};
+    const extra = [];
+    if (hints.videoHash) extra.push(`videoHash=${encodeURIComponent(hints.videoHash)}`);
+    if (hints.videoSize) extra.push(`videoSize=${encodeURIComponent(hints.videoSize)}`);
+    if (hints.filename) extra.push(`filename=${encodeURIComponent(hints.filename)}`);
+    return `${base}/subtitles/${encodeURIComponent(type)}/${encodeURIComponent(videoId)}${extra.length ? '/' + extra.join('&') : ''}.json`;
+  }
+
+  async function fetchJson(url, ms) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), ms);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal, credentials: 'omit' });
+      return res.ok ? await res.json() : null;
+    } finally { clearTimeout(timer); }
+  }
+
+  // → [{ url, lang, label, fileName? }]: every subtitle in the language chosen in Stremio
+  //   ("Default Subtitles Language"), with no limit. Order: the stream's own subtitles, then each
+  //   add-on in the order it has in Stremio, each add-on's subtitles in the order it returned them
+  //   (add-ons usually rank them best first). No subtitles in that language → none.
+  async function collectSubtitles(href, stream) {
+    const route = playerRoute(href);
+    const profile = readProfile();
+    const settings = profile.settings || {};
+    const wanted = langKey(settings.subtitlesLanguage || 'eng');
+    const buckets = []; // one list per source, in display order
+
+    const own = stream && Array.isArray(stream.subtitles) ? stream.subtitles : [];
+    buckets.push(own.filter((s) => s && typeof s.url === 'string').map((s) => ({ ...s, source: (stream && stream.name) || 'Stream' })));
+
+    // Shown in the console (F12) to explain a missing subtitle. No links or tokens in it.
+    const report = { route: route && `${route.type}/${route.videoId}`, profile: !!profile.addons, wanted, embedded: own.length, addons: {} };
+    if (route) {
+      const addons = Array.isArray(profile.addons) && profile.addons.length ? profile.addons : DEFAULT_SUB_ADDONS;
+      const requests = addons.filter((a) => addonServes(a, route.type, route.videoId)).map(async (addon) => {
+        const bucket = [];
+        buckets.push(bucket); // reserved now, so the order stays Stremio's whatever answers first
+        let name = (addon.manifest && addon.manifest.name) || 'Add-on';
+        for (let n = 2; report.addons[name] !== undefined; n++) name = `${(addon.manifest && addon.manifest.name) || 'Add-on'} (${n})`;
+        report.addons[name] = 'waiting';
+        const url = subtitlesUrl(addon, route.type, route.videoId, stream);
+        if (!url) { report.addons[name] = 'not http'; return; }
+        const t0 = Date.now();
+        try {
+          const data = await fetchJson(url, SUBS_TIMEOUT_MS);
+          const list = data && Array.isArray(data.subtitles) ? data.subtitles : [];
+          for (const s of list) {
+            if (s && typeof s.url === 'string') bucket.push({ ...s, source: name });
+          }
+          const mine = list.filter((s) => s && langKey(s.lang) === wanted).length;
+          report.addons[name] = `${mine} of ${list.length} in ${Date.now() - t0} ms, langs: ${[...new Set(list.map((s) => s && s.lang))].slice(0, 12).join(',')}`;
+        } catch (err) {
+          report.addons[name] = `failed after ${Date.now() - t0} ms (${err && err.name === 'AbortError' ? 'timeout' : (err && err.message) || 'error'})`;
+        }
+      });
+      await Promise.all(requests);
+    }
+
+    const seen = new Set();
+    const chosen = [];
+    for (const bucket of buckets) {
+      for (const s of bucket) {
+        if (!/^https?:\/\//i.test(s.url) || seen.has(s.url) || langKey(s.lang) !== wanted) continue;
+        seen.add(s.url);
+        chosen.push(s);
+      }
+    }
+
+    report.chosen = chosen.length;
+    console.info('[Stremio→PotPlayer] subtitles', JSON.stringify(report));
+
+    return chosen.map((s) => ({
+      url: s.url,
+      lang: String(s.lang || ''),
+      label: `${langName(s.lang)} - ${s.source}`,
+      fileName: typeof s.subtitleFileName === 'string' ? s.subtitleFileName : undefined,
+    }));
   }
 
   // ------------------------------------------------------------------ potplayer: link
@@ -186,17 +350,52 @@
     try { await navigator.clipboard.writeText(text); return true; } catch { return false; }
   }
 
-  function askTorrentUrl(result) {
+  function askBackground(msg) {
     return new Promise((resolve) => {
       try {
-        chrome.runtime.sendMessage(
-          { type: 'spp:torrent', infoHash: result.infoHash, fileIdx: result.fileIdx, sources: result.sources },
-          (res) => resolve(chrome.runtime.lastError ? { ok: false, reason: 'no-extension' } : res),
-        );
+        chrome.runtime.sendMessage(msg, (res) => resolve(chrome.runtime.lastError || !res ? { ok: false, reason: 'no-extension' } : res));
       } catch {
         resolve({ ok: false, reason: 'no-extension' });
       }
     });
+  }
+
+  function askTorrentUrl(result) {
+    return askBackground({ type: 'spp:torrent', infoHash: result.infoHash, fileIdx: result.fileIdx, sources: result.sources });
+  }
+
+  // Checked when a stream is right-clicked, so the answer is usually ready by the click.
+  let helperPing = null;
+  function checkHelper() {
+    if (!helperPing) {
+      helperPing = askBackground({ type: 'spp:helper-ping' });
+      helperPing.then((res) => { if (!res.ok) setTimeout(() => { helperPing = null; }, 3000); });
+    }
+    return helperPing;
+  }
+
+  // → true when the helper opened PotPlayer (with or without subtitles).
+  async function playWithHelper(result, href) {
+    const helper = await checkHelper();
+    if (!helper.ok) return false;
+    if (!helper.potplayer) { toast(TEXT.helperNoPotPlayer, 'error', 9000); return true; }
+
+    toast(TEXT.findingSubs, 'info', 12000);
+    let subtitles = [];
+    try { subtitles = await collectSubtitles(href, result.stream); } catch (err) {
+      console.warn('[Stremio→PotPlayer] could not get subtitles:', err && err.message);
+    }
+    const res = await askBackground({ type: 'spp:helper-play', url: result.url, subtitles });
+    if (!res.ok) {
+      helperPing = null;
+      console.warn('[Stremio→PotPlayer] subtitles helper failed:', res.reason, res.detail || '');
+      return false;
+    }
+    if (result.headers && Object.keys(result.headers).length) toast(TEXT.headersNote, 'warn', 7000);
+    else if (res.subtitles) toast(TEXT.sendingWithSubs(res.subtitles), 'info', 5000);
+    else toast(subtitles.length ? TEXT.sendingSubsFailed : TEXT.sendingNoSubs, 'warn', 8000);
+    if (subtitles.length && res.failed) console.warn('[Stremio→PotPlayer] subtitles not downloaded:', res.failed, 'of', subtitles.length, JSON.stringify(res.errors || []));
+    return true;
   }
 
   let lastActivation = 0;
@@ -211,7 +410,8 @@
     closeMenu(opt);
     if (!anchor) { toast(TEXT.notStream, 'error'); return; }
 
-    const entry = resolveHref(anchor.getAttribute('href'));
+    const href = anchor.getAttribute('href');
+    const entry = resolveHref(href);
     let result = entry.result || (await entry.promise);
     if (!result.ok) { toast(result.message, 'error', 9000); return; }
 
@@ -224,6 +424,9 @@
       }
       result = { ...result, url: res.url };
     }
+
+    // Optional subtitles helper: opens PotPlayer itself, with the subtitles.
+    if (await playWithHelper(result, href)) return;
 
     const uri = buildPotPlayerUri(result.url);
     if (!uri) {
@@ -428,7 +631,7 @@
   window.addEventListener('contextmenu', (e) => {
     const anchor = findStreamAnchor(e.target);
     lastContext = anchor ? { anchor, time: Date.now() } : null; // a right-click elsewhere resets it
-    if (anchor) resolveHref(anchor.getAttribute('href'));
+    if (anchor) { resolveHref(anchor.getAttribute('href')); checkHelper(); }
   }, { capture: true });
 
   // Stremio Web is a single-page React app: menus are created and destroyed without page
@@ -491,5 +694,5 @@
   }
 
   // For the offline test page only.
-  window.__stremioPotPlayerTest = { decodeStream, analyzeStream, buildPotPlayerUri, streamSegment };
+  window.__stremioPotPlayerTest = { decodeStream, analyzeStream, buildPotPlayerUri, streamSegment, playerRoute, collectSubtitles, langKey, langName };
 })();
