@@ -32,7 +32,7 @@ This Chrome extension adds a **Play in PotPlayer** option to the right-click men
 
 The first time, Chrome asks to open PotPlayer. Tick **Always allow** and click **Open**.
 
-## Subtitles (optional)
+## Subtitles
 
 A link can only carry the video, so subtitles from your Stremio subtitle add-ons (such as OpenSubtitles or SubDL) do not reach PotPlayer by default. To bring them along, install the small subtitles helper once:
 
