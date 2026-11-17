@@ -51,7 +51,16 @@ const STREAMS = [
 function playIcon() { return '<svg class="menu-icon-JD2rP" viewBox="0 0 512 512"><path d="M396 246 164 85c-9-6-21 0-21 11v321c0 11 12 17 21 11l232-161c8-5 8-16 0-21z"/></svg>'; }
 function linkIcon() { return '<svg class="menu-icon-JD2rP" viewBox="0 0 512 512"><path d="M100 100h300v300H100z"/></svg>'; }
 
-function menuHtml(desc) {
+function menuHtml(desc, href) {
+  if (variant === 'new') {
+    // New interface (2026-11-16): portal outside the row; "Play" is the row's own #/player/ link
+    return `<div class="menu-container-B6cqK portal-menu-Ll8Zr"><div class="menu-giebf">
+      <div class="menu-title-WXl2l">${desc}</div>
+      <a tabindex="0" title="Play" class="menu-option-YjVKK button-container-zVLH6" href="${href}">${playIcon()}<div class="menu-label-J_yov">Play</div></a>
+      <div tabindex="0" title="Copy stream link" data-link="streaming" class="menu-option-YjVKK button-container-zVLH6 copy">${linkIcon()}<div class="menu-label-J_yov">Copy stream link</div></div>
+      <div tabindex="0" title="Copy video download link" data-link="download" class="menu-option-YjVKK button-container-zVLH6 copy">${linkIcon()}<div class="menu-label-J_yov">Copy video download link</div></div>
+    </div></div>`;
+  }
   if (variant === 'renamed') {
     // Stremio renamed every class: only structure is left
     return `<div class="popover-wrap-Z1"><div class="ctx-menu-body-Z9">
@@ -71,7 +80,7 @@ function menuHtml(desc) {
 let openMenu = null; // {anchor, el}
 function closeMenu(reason) {
   if (!openMenu) return;
-  openMenu.el.remove(); openMenu.anchor.classList.remove('active');
+  (openMenu.layer || openMenu.el).remove(); openMenu.anchor.classList.remove('active');
   rec('menu-closed:' + reason); openMenu = null;
 }
 
@@ -94,9 +103,39 @@ function closeMenu(reason) {
   list.appendChild(ad);
 
   // Stremio-like behaviour -------------------------------------------------
+  // New interface: a full-page layer appears on the right-button press, so the
+  // contextmenu event that follows lands on the layer, not on the row.
+  let pendingRow = null;
+  if (variant === 'new') {
+    list.addEventListener('pointerdown', (e) => {
+      const a = e.target.closest('a[class*="stream-container-"]');
+      if (!a || e.button !== 2) return;
+      closeMenu('reopen');
+      pendingRow = a;
+      const layer = document.createElement('div');
+      layer.className = 'portal-layer-D9mqU';
+      layer.style.cssText = 'position:fixed;inset:0;z-index:9';
+      document.body.appendChild(layer);
+      layer.addEventListener('contextmenu', (ev) => { ev.preventDefault(); rec('contextmenu-target:' + ev.target.className); openFor(pendingRow, layer); });
+      layer.addEventListener('mousedown', (ev) => { if (ev.target === layer) closeMenu('layer-mousedown'); });
+    });
+  }
+  function openFor(a, layer) {
+    setTimeout(() => {
+      const holder = document.createElement('div');
+      holder.innerHTML = menuHtml((a.querySelector('[class*="description"]') || a).textContent, a.getAttribute('href'));
+      const el = holder.firstElementChild;
+      el.style.cssText = 'position:fixed;top:120px;left:480px;z-index:10;width:340px;background:#15122b';
+      layer.appendChild(el);
+      a.classList.add('active');
+      openMenu = { anchor: a, el, layer };
+      el.querySelectorAll('.copy').forEach(c => c.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); rec('copy-clicked'); closeMenu('copy'); }));
+      rec('menu-opened:' + a.dataset.label);
+    }, 0);
+  }
   list.addEventListener('contextmenu', (e) => {
     const a = e.target.closest('a[class*="stream-container-"]');
-    if (!a) return;
+    if (!a || variant === 'new') return;
     e.preventDefault();
     closeMenu('reopen');
     setTimeout(() => { // React renders a moment later

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Play in PotPlayer for Stremio",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Unofficial. Adds \"Play in PotPlayer\" to the stream right-click menu on Stremio Web.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwRTqC+SrerX7paRZOwEICnhM4dzQBKgljLyVD+5EBz/Ct4hRKsnzCRMBEoAqShv0HxegQi6Hc/oKS5clKcCr2OvzxzJmW3sK9pk08DoDZYb6zRLVX7V1GbLtc1k0fAqTQrHDwnpxEbdEytQzmuytSCsG8pCiGip1MkMoklNMSFbCQ4y5UPeUTsxDRtuqpltZ13dDdsG+KT4wU+U0BtoEtKtIxb8wrTU+pw1wvJ8L0WnXsbHVF8s+H74W4lB3utV3s/hNbfyVzsfAaP0lyWPE2hpVrgYMprPXTlvDQ2Bl+Y4kEYxVBG8NFtvlpc1xz+sUtnC1QFcMVvKgua525w/69wIDAQAB",
   "icons": {
@@ -13,18 +13,41 @@
   "background": {
     "service_worker": "background.js"
   },
+  "action": {
+    "default_title": "Play in PotPlayer: settings"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
   "host_permissions": [
-    "http://127.0.0.1:11470/*"
+    "http://127.0.0.1:11470/*",
+    "https://api.github.com/*",
+    "https://github.com/*",
+    "https://*.githubusercontent.com/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
   ],
   "permissions": [
     "clipboardWrite",
-    "nativeMessaging"
+    "nativeMessaging",
+    "storage",
+    "scripting"
   ],
   "content_scripts": [
     {
-      "matches": ["https://web.stremio.com/*", "https://web.strem.io/*"],
-      "js": ["content.js"],
-      "css": ["content.css"],
+      "matches": [
+        "https://web.stremio.com/*"
+      ],
+      "js": [
+        "content.js",
+        "notice.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_idle"
     }
   ]

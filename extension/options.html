@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Play in PotPlayer: settings</title>
+<link rel="stylesheet" href="options.css">
+</head>
+<body>
+<main>
+  <header>
+    <img src="icons/icon48.png" alt="" width="40" height="40">
+    <div>
+      <h1>Play in PotPlayer</h1>
+      <p class="muted">Settings · version <span id="version"></span></p>
+    </div>
+  </header>
+
+  <section aria-labelledby="sites-title">
+    <h2 id="sites-title">Supported sites</h2>
+    <p class="muted">The extension works on these Stremio Web addresses. It works with both the new and the previous Stremio Web interface.</p>
+
+    <ul class="sites" id="built-in"></ul>
+
+    <h3>Your sites</h3>
+    <p class="muted">Add another address where you open Stremio Web, for example your own copy of it. Chrome asks you to allow each one.</p>
+    <ul class="sites" id="custom"></ul>
+    <p class="empty muted" id="custom-empty">None yet.</p>
+
+    <form id="add-form" autocomplete="off">
+      <label for="site-input" class="visually-hidden">Site address</label>
+      <input id="site-input" type="text" inputmode="url" spellcheck="false" placeholder="https://example.com/stremio/">
+      <button type="submit">Add site</button>
+    </form>
+    <p class="message" id="message" role="status" aria-live="polite"></p>
+    <p class="muted small">After adding a site, reload its tab (F5).</p>
+  </section>
+</main>
+<script src="options.js"></script>
+</body>
+</html>

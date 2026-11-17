@@ -4,7 +4,10 @@ window.__runSppTests = async function () {
   const results = {};
   async function openMenu(label) {
     const a = document.querySelector(`a[data-label="${label}"]`);
-    a.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2 }));
+    // The new interface adds a full-page layer on the button press; contextmenu then lands on it.
+    a.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 2 }));
+    const layers = document.querySelectorAll('[class*="portal-layer"]');
+    (layers[layers.length - 1] || a).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2 }));
     await sleep(60);
   }
   function clickEl(el) {

@@ -12,10 +12,13 @@
   const MAX_URI_LENGTH = 2000;   // Chrome drops external-protocol links longer than ~2046 chars on Windows
   const CONTEXT_TTL_MS = 5000;   // how long a right-click on a stream counts as "recent"
 
-  // Verified on web.stremio.com (2026-09-30). Class names carry build hashes
-  // (e.g. context-menu-content-Xe_lN), so they are matched by prefix only. If Stremio
-  // renames them, the heuristics further down still find the menu.
-  const MENU_SELECTORS = ['[class*="context-menu-content"]', '[role="menu"]'];
+  // Class names carry build hashes (e.g. context-menu-content-Xe_lN), so they are matched by
+  // prefix only. If Stremio renames them, the heuristics further down still find the menu.
+  // Previous interface (verified 2026-09-30): the menu is rendered INSIDE the stream row.
+  // New interface (verified 2026-11-16): the menu is a portal outside the row
+  // (portal-layer > portal-menu > menu > menu-option), and its "Play" option is itself the
+  // row's #/player/... link. Both are supported by the same code; no setting needed.
+  const MENU_SELECTORS = ['[class*="context-menu-content"]', '[class*="portal-menu"]', '[role="menu"]'];
   const OPTION_SELECTORS = ['[class*="context-menu-option-container"]', '[class*="menu-option"]', '[role="menuitem"]'];
   const LABEL_SELECTORS = ['[class*="option-label"]', '[class*="label"]:not(svg)'];
   const PLAY_WORDS = /^(play|تشغيل|شغل|reproducir|jouer|lire|abspielen|wiedergeben|riproduci|reproduzir|oynat|воспроизвести|смотреть|播放|재생|再生)$/i;
@@ -407,10 +410,10 @@
     const seq = ++activationSeq;
 
     const anchor = optionAnchors.get(opt) || findStreamAnchor(opt) || (recentContext() || {}).anchor;
+    const href = anchor && anchor.getAttribute('href'); // read before the menu (and its link) closes
     closeMenu(opt);
-    if (!anchor) { toast(TEXT.notStream, 'error'); return; }
+    if (!href) { toast(TEXT.notStream, 'error'); return; }
 
-    const href = anchor.getAttribute('href');
     const entry = resolveHref(href);
     let result = entry.result || (await entry.promise);
     if (!result.ok) { toast(result.message, 'error', 9000); return; }
@@ -557,14 +560,23 @@
 
     for (const menu of candidates) {
       if (isOurs(menu)) continue;
-      // Normal case: the menu is rendered inside the stream row (<a href="#/player/...">).
-      let anchor = findStreamAnchor(menu);
+      // Previous interface: the menu is rendered inside the stream row (<a href="#/player/...">).
+      // New interface: the menu's own "Play" option is the stream's #/player/... link.
+      let anchor = findStreamAnchor(menu) || menuStreamLink(menu);
       // Portal case: menu rendered elsewhere right after a right-click on a stream row.
       if (!anchor && ctx && !menu.closest('a') && addedNodes.some((n) => n === menu || n.contains(menu) || menu.contains(n))) {
         anchor = ctx.anchor;
       }
       if (anchor) inject(menu, anchor);
     }
+  }
+
+  // The stream link that is one of the menu's own options (new interface only).
+  function menuStreamLink(menu) {
+    for (const a of menu.querySelectorAll('a[href]')) {
+      if (isStreamAnchor(a) && !isOurs(a) && menuOptions(menu).includes(a)) return a;
+    }
+    return null;
   }
 
   function closeMenu(opt) {
@@ -588,7 +600,7 @@
         if (!opt.isConnected) return;
         // Last resort: just hide it; Stremio removes it on the next click anyway.
         const menu = opt.parentElement;
-        if (menu) (findMenuRoot(menu) || menu).style.visibility = 'hidden';
+        if (menu) (findMenuRoot(menu) || menu.closest('[class*="portal-layer"]') || menu).style.visibility = 'hidden';
       }, 80);
     }, 30);
   }
@@ -628,10 +640,25 @@
   }, { capture: true });
 
   // Remember which stream row was right-clicked (never blocks Stremio's own handling).
+  // The new interface puts a full-page layer over the row as soon as the right button goes
+  // down, so the "contextmenu" event that follows lands on that layer, not on the row.
+  // The row is therefore also recorded on the button press.
+  function rememberRow(anchor) {
+    lastContext = { anchor, time: Date.now() };
+    resolveHref(anchor.getAttribute('href'));
+    checkHelper();
+  }
+  window.addEventListener('pointerdown', (e) => {
+    if (e.button !== 2) return;
+    const anchor = findStreamAnchor(e.target);
+    if (anchor) rememberRow(anchor);
+    else lastContext = null; // a right-click elsewhere resets it
+  }, { capture: true });
   window.addEventListener('contextmenu', (e) => {
     const anchor = findStreamAnchor(e.target);
-    lastContext = anchor ? { anchor, time: Date.now() } : null; // a right-click elsewhere resets it
-    if (anchor) { resolveHref(anchor.getAttribute('href')); checkHelper(); }
+    if (anchor) { rememberRow(anchor); return; }
+    // A right-click elsewhere resets it, unless it is the one the button press just recorded.
+    if (!(lastContext && Date.now() - lastContext.time < 1000)) lastContext = null;
   }, { capture: true });
 
   // Stremio Web is a single-page React app: menus are created and destroyed without page

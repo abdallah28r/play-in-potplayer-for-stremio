@@ -1,0 +1,12 @@
+{
+  "version": "1.3.0",
+  "image": "notice.png",
+  "en": {
+    "title": "Works with the new Stremio Web",
+    "text": "This version works with both the new and the previous Stremio Web interface, and lets you add your own Stremio Web addresses.\n\nDownload it, extract it over your current extension folder, then click the reload icon on the extension in `chrome://extensions`."
+  },
+  "ar": {
+    "title": "يعمل مع واجهة Stremio Web الجديدة",
+    "text": "هذا الإصدار يعمل مع واجهة Stremio Web الجديدة والسابقة، ويتيح لك إضافة عناوين Stremio Web الخاصة بك.\n\nحمّله، وفك الضغط فوق مجلد الإضافة الحالي، ثم اضغط زر إعادة التحميل على الإضافة في `chrome://extensions`."
+  }
+}
