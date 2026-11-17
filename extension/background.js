@@ -145,11 +145,14 @@ chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
 
 // "What's new": whats-new.json in this folder, shown once after the extension is updated
 // (not after a first install).
-// "New version" notice: notice.json (and its picture) attached to the latest GitHub release.
-// Only releases/latest is read, so drafts and pre-releases never show. Shown on two different
-// days per version; closing it counts as one of them; "Download" ends it for that version.
-// Nothing is sent to GitHub except the request itself (no user data, no identifiers).
+// "New version" notice: notices/notice.json (and its picture) in the repository's main branch.
+// It shows only when its version is the latest published GitHub release and is newer than this
+// extension, so a notice pushed before its release never shows. Only releases/latest is read,
+// so drafts and pre-releases never count. Shown on two different days per version; closing it
+// counts as one of them; "Download" ends it for that version.
+// Nothing is sent to GitHub except the requests themselves (no user data, no identifiers).
 const RELEASES_API = 'https://api.github.com/repos/abdallah28r/play-in-potplayer-for-stremio/releases/latest';
+const NOTICES_URL = 'https://raw.githubusercontent.com/abdallah28r/play-in-potplayer-for-stremio/main/notices/';
 const CHECK_EVERY_MS = 12 * 60 * 60 * 1000;
 const MAX_IMAGE_BYTES = 1.5 * 1024 * 1024;
 const NOTICE_DAYS = 2;
@@ -184,7 +187,9 @@ async function fetchAsset(url, asJson) {
   return asJson ? res.json() : res.blob();
 }
 
-// → { version, url, data, image } of the latest release's notice, or null. Cached for 12 hours.
+const sameVersion = (a, b) => !isNewer(a, b) && !isNewer(b, a);
+
+// → { version, url, data, image } for the latest release, or null. Cached for 12 hours.
 async function latestNotice() {
   const { noticeCache } = await chrome.storage.local.get('noticeCache');
   if (noticeCache && Date.now() - noticeCache.checkedAt < CHECK_EVERY_MS) return noticeCache.notice;
@@ -194,18 +199,20 @@ async function latestNotice() {
     const res = await fetchWithTimeout(RELEASES_API, 10000, { headers: { Accept: 'application/vnd.github+json' }, credentials: 'omit', cache: 'no-store' });
     if (res.ok) {
       const release = await res.json();
-      const assets = Array.isArray(release.assets) ? release.assets : [];
-      const find = (name) => assets.find((a) => a && a.name === name);
-      const json = find('notice.json');
-      if (json && isNewer(release.tag_name, installed())) {
-        const data = await fetchAsset(json.browser_download_url, true);
-        data.version = String(data.version || release.tag_name).replace(/^v/i, '');
-        let image = null;
-        const pic = data.image && find(String(data.image));
-        if (pic && pic.size <= MAX_IMAGE_BYTES && /^image\//.test(pic.content_type || 'image/')) {
-          try { image = await blobToDataUrl(await fetchAsset(pic.browser_download_url, false)); } catch { /* text only */ }
+      if (release.tag_name && isNewer(release.tag_name, installed())) {
+        const data = await fetchAsset(NOTICES_URL + 'notice.json', true);
+        // The notice must be written for this release, not an older or a future one.
+        if (data && data.version && sameVersion(data.version, release.tag_name)) {
+          data.version = String(data.version).replace(/^v/i, '');
+          let image = null;
+          if (typeof data.image === 'string' && /^[\w.-]+\.(png|jpe?g|webp|gif)$/i.test(data.image)) {
+            try {
+              const blob = await fetchAsset(NOTICES_URL + data.image, false);
+              if (blob.size <= MAX_IMAGE_BYTES) image = await blobToDataUrl(blob.type.startsWith('image/') ? blob : blob.slice(0, blob.size, `image/${data.image.split('.').pop().toLowerCase().replace('jpg', 'jpeg')}`));
+            } catch { /* text only */ }
+          }
+          notice = { version: data.version, url: release.html_url, data, image };
         }
-        notice = { version: data.version, url: release.html_url, data, image };
       }
     }
   } catch (e) {

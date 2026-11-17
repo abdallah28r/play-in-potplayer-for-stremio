@@ -23,8 +23,7 @@
   "host_permissions": [
     "http://127.0.0.1:11470/*",
     "https://api.github.com/*",
-    "https://github.com/*",
-    "https://*.githubusercontent.com/*"
+    "https://raw.githubusercontent.com/*"
   ],
   "optional_host_permissions": [
     "https://*/*",
