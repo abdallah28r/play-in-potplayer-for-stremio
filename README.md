@@ -100,7 +100,7 @@ Streams that need custom connection headers may not play, because PotPlayer cann
 
 All versions and changes are on the [Releases page](https://github.com/abdallah28r/play-in-potplayer-for-stremio/releases).
 
-**Update notices:** from 1.3.0, a small notice appears at the bottom of Stremio Web when a new version is out, with a **Download** button. It shows on two different days at most. After you update, a short **What's new** notice shows once. Notices are in Arabic when Stremio's language is Arabic, and in English otherwise.
+**Update notices:** from 1.3.0, a small notice appears at the bottom of Stremio Web when a new version is out, with a **Download** button. It shows on two different days at most. After you install or update, a short **What's new** notice shows once. Notices are in Arabic when Stremio's language is Arabic, and in English otherwise.
 
 ## Privacy
 

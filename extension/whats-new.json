@@ -3,10 +3,10 @@
   "image": "whats-new.png",
   "en": {
     "title": "Works with the new Stremio Web",
-    "text": "**Play in PotPlayer** is back in the stream menu of the new Stremio Web, and still works with the previous one.\n\n- **Settings:** using Stremio Web at another address? Add it in the settings. Click the extension icon to open them.\n- **Update notices:** a short notice tells you when a new version is out, with a Download button."
+    "text": "**Play in PotPlayer** works with the new Stremio Web stream menu, and with the previous one.\n\n- **Settings:** using Stremio Web at another address? Add it in the settings. Click the extension icon to open them.\n- **Update notices:** a short notice tells you when a new version is out, with a Download button."
   },
   "ar": {
     "title": "يعمل مع واجهة Stremio Web الجديدة",
-    "text": "رجع خيار **Play in PotPlayer** لقائمة البث في واجهة Stremio Web الجديدة، ويعمل أيضًا مع الواجهة السابقة.\n\n- **الإعدادات:** تستخدم Stremio Web على عنوان آخر؟ أضفه من الإعدادات. اضغط أيقونة الإضافة لفتحها.\n- **إشعارات التحديث:** إشعار قصير يخبرك عند صدور إصدار جديد، مع زر تحميل."
+    "text": "خيار **Play in PotPlayer** يعمل مع قائمة البث في واجهة Stremio Web الجديدة، ومع الواجهة السابقة.\n\n- **الإعدادات:** تستخدم Stremio Web على عنوان آخر؟ أضفه من الإعدادات. اضغط أيقونة الإضافة لفتحها.\n- **إشعارات التحديث:** إشعار قصير يخبرك عند صدور إصدار جديد، مع زر تحميل."
   }
 }
