@@ -24,6 +24,31 @@
     api.showNotice({ kind, data, image, lang, instant: !animate.checked, onAction: (a) => log(`${kind} ${lang}: ${a}`) });
   }
 
+  // Live: the same rule as latestNotice() in background.js, reading GitHub right now,
+  // as if version 1.2.0 were installed. Shows what users will get, or says why nothing shows.
+  const REPO = 'abdallah28r/play-in-potplayer-for-stremio';
+  const parts = (v) => String(v || '').replace(/^v/i, '').split(/[.-]/).map((n) => parseInt(n, 10) || 0);
+  const newer = (a, b) => { const x = parts(a), y = parts(b); for (let i = 0; i < Math.max(x.length, y.length); i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
+  async function showLive(lang) {
+    const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { cache: 'no-store', credentials: 'omit' });
+    if (!res.ok) throw new Error(`releases/latest: HTTP ${res.status}`);
+    const release = await res.json();
+    const base = `https://raw.githubusercontent.com/${REPO}/main/notices/`;
+    const nres = await fetch(base + 'notice.json', { cache: 'no-store', credentials: 'omit' });
+    if (!nres.ok) throw new Error(`notices/notice.json: HTTP ${nres.status}`);
+    const data = await nres.json();
+    if (newer(data.version, release.tag_name) || newer(release.tag_name, data.version)) {
+      throw new Error(`notice.json is ${data.version}, latest release is ${release.tag_name}: nothing would show`);
+    }
+    let image = null;
+    if (data.image) {
+      const blob = await (await fetch(base + data.image, { cache: 'no-store', credentials: 'omit' })).blob();
+      image = await new Promise((resolve) => { const r = new FileReader(); r.onload = () => resolve(r.result); r.readAsDataURL(blob); });
+    }
+    logEl.textContent = `Live: release ${release.tag_name}, notice ${data.version}`;
+    api.showNotice({ kind: 'update', data, image, lang, instant: !animate.checked, onAction: (a) => log(`live ${lang}: ${a}`) });
+  }
+
   // ---------------------------------------------------------------- panel
   const host = document.createElement('div');
   const root = host.attachShadow({ mode: 'open' });
@@ -55,6 +80,9 @@
           <div class="row-label">What's new (whats-new.json)</div>
           <button data-k="whatsnew" data-l="en">English</button>
           <button data-k="whatsnew" data-l="ar">العربية</button>
+          <div class="row-label">Live from GitHub (as if 1.2.0 is installed)</div>
+          <button data-live="en">English</button>
+          <button data-live="ar">العربية</button>
         </div>
         <label><input type="checkbox" id="anim" checked> With the capsule animation</label>
         <div class="log" id="log"></div>
@@ -68,6 +96,10 @@
   root.querySelectorAll('[data-k]').forEach((b) => b.addEventListener('click', () => {
     logEl.textContent = '';
     show(b.dataset.k, b.dataset.l).catch((e) => { logEl.textContent = `Error: ${e.message}`; });
+  }));
+  root.querySelectorAll('[data-live]').forEach((b) => b.addEventListener('click', () => {
+    logEl.textContent = 'Live: asking GitHub…';
+    showLive(b.dataset.live).catch((e) => { logEl.textContent = `Live: ${e.message}`; });
   }));
   const panel = root.querySelector('.panel');
   root.getElementById('toggle').addEventListener('click', (e) => {

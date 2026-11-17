@@ -143,8 +143,8 @@ chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
 
 // ------------------------------------------------------------------ update notice and "What's new"
 
-// "What's new": whats-new.json in this folder, shown once after the extension is updated
-// (not after a first install).
+// "What's new": whats-new.json in this folder, shown once after the extension is installed
+// or updated to a newer version.
 // "New version" notice: notices/notice.json (and its picture) in the repository's main branch.
 // It shows only when its version is the latest published GitHub release and is newer than this
 // extension, so a notice pushed before its release never shows. Only releases/latest is read,
@@ -166,8 +166,12 @@ function isNewer(a, b) {
 function today() { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; }
 const installed = () => chrome.runtime.getManifest().version;
 
+// Shown after a first install too: many people remove the extension and load the new one,
+// which Chrome counts as a first install.
 async function noticeOnInstalled(details) {
-  if (details.reason === 'update' && isNewer(installed(), details.previousVersion || '0')) {
+  const fresh = details.reason === 'install';
+  const updated = details.reason === 'update' && isNewer(installed(), details.previousVersion || '0');
+  if (fresh || updated) {
     await chrome.storage.local.set({ whatsNewPending: installed() });
   }
 }

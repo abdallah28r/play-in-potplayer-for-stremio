@@ -5,7 +5,7 @@ Two windows can appear on Stremio Web. Both are written in JSON files you contro
 | Window | File | Where it lives | When it shows |
 | --- | --- | --- | --- |
 | New version | `notice.json` + its picture | This folder, on the `main` branch | When the version in `notice.json` is the **latest** published release and is newer than the installed extension. On two different days, at most. "Download" stops it for that version. |
-| What's new | `whats-new.json` + its picture | Inside `extension/` (ships with the extension) | Once, after the extension is updated (not after a first install). |
+| What's new | `whats-new.json` + its picture | Inside `extension/` (ships with the extension) | Once, after the extension is installed or updated to a newer version. |
 
 The extension reads `notice.json` and its picture straight from this folder on `main`, so nothing extra is attached to the release. A notice only shows when its `version` matches the latest published release, so pushing it before the release is safe: it waits for the release. Drafts and pre-releases are never read.
 
